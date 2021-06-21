@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 from utils.inverter import StyleGANInverter
 from models.face_landmark_detector import FaceLandmarkDetector
 
@@ -16,20 +17,6 @@ def align(image_name):
     face_infos = face_landmark_detector.detect(os.path.join('images', image_name))[0]
     image = face_landmark_detector.align(face_infos)
     return image
-
-
-def imshow(images):
-    num, height, width, channels = images.shape
-    row = int(np.floor(np.sqrt(num)))
-    col = int(np.ceil(num // row))
-
-    fused_image = np.zeros((height * row, width * col, channels), dtype=np.uint8)
-
-    plt.figure(figsize=(8, 8))
-    plt.axis("off")
-    plt.title("Training Images")
-    plt.imshow(
-    np.transpose(vutils.make_grid(real_batch[0].to(device)[:64], padding=2, normalize=True).cpu(), (1, 2, 0)))
 
 
 # target_image_name = ['wtt.jpg', 'cyy.jpg']
@@ -57,6 +44,11 @@ target_image_code = inverter.easy_invert(target_image, 1)[0]
 linspace = np.linspace(0, 1, step).reshape(-1, 1, 1).astype(np.float32)
 inter_codes = (1 - linspace) * source_image_code + linspace * target_image_code
 inter_images = generator.easy_synthesize(inter_codes, latent_space_type='wp')['image']
-print()
+
+plt.figure(figsize=(19.2, 10.8))
+plt.axis("off")
+plt.title(f"Interpolated images between {source_image_name.split('.')[0]} and {target_image_name.split('.')[0]}")
+plt.imshow(np.concatenate(inter_images, axis=1))
+plt.show()
 
 exit(100)
