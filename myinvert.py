@@ -1,21 +1,62 @@
 import os
-import sys
-import io
-import bz2
 import numpy as np
-from PIL import Image
-import IPython.display
-import scipy.ndimage
-from utils.editor import manipulate
 from utils.inverter import StyleGANInverter
-from models.helper import build_generator
+from models.face_landmark_detector import FaceLandmarkDetector
+
+IMAGE_SIZE = 64
+
+inverter = StyleGANInverter('styleganinv_ffhq256', learning_rate=0.01, iteration=100,
+                            reconstruction_loss_weight=1.0, perceptual_loss_weight=5e-5, regularization_loss_weight=0)
+generator = inverter.G
+resolution = inverter.G.resolution
 
 
-inverter = StyleGANInverter('styleganinv_ffhq256',
-                            learning_rate=0.01,
-                            iteration=100,
-                            reconstruction_loss_weight=1.0,
-                            perceptual_loss_weight=5e-5,
-                            regularization_loss_weight=0)
+def align(image_name):
+    face_landmark_detector = FaceLandmarkDetector(resolution)
+    face_infos = face_landmark_detector.detect(os.path.join('images', image_name))[0]
+    image = face_landmark_detector.align(face_infos)
+    return image
 
 
+def imshow(images):
+    num, height, width, channels = images.shape
+    row = int(np.floor(np.sqrt(num)))
+    col = int(np.ceil(num // row))
+
+    fused_image = np.zeros((height * row, width * col, channels), dtype=np.uint8)
+
+    plt.figure(figsize=(8, 8))
+    plt.axis("off")
+    plt.title("Training Images")
+    plt.imshow(
+    np.transpose(vutils.make_grid(real_batch[0].to(device)[:64], padding=2, normalize=True).cpu(), (1, 2, 0)))
+
+
+# target_image_name = ['wtt.jpg', 'cyy.jpg']
+# target_images = [align(name) for name in target_image_name]
+#
+# context_image_names = ['000002.png', '000008.png', '000018.png', '000019.png']
+# context_images = [align(name) for name in context_image_names]
+#
+# wtt, cyy = target_images
+#
+# target_image_code = [inverter.easy_invert(image, 1)[0] for image in target_images]
+# target_image_code = [inverter.easy_invert(image, 1)[0] for image in target_images]
+
+step = 5
+
+source_image_name = 'wtt.jpg'
+target_image_name = 'cyy.jpg'
+
+source_image = align(source_image_name)
+target_image = align(target_image_name)
+
+source_image_code = inverter.easy_invert(source_image, 1)[0]
+target_image_code = inverter.easy_invert(target_image, 1)[0]
+
+linspace = np.linspace(0, 1, step).reshape(-1, 1, 1).astype(np.float32)
+inter_codes = (1 - linspace) * source_image_code + linspace * target_image_code
+inter_images = generator.easy_synthesize(inter_codes, latent_space_type='wp')['image']
+print()
+
+exit(100)
